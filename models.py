@@ -12,15 +12,13 @@ class Payment(Base):
     date_of_payment = Column(Date)
     for_date = Column(String(50))
 
-    
-
     # Many-to-One relation with Service
     service_id = Column(Integer, ForeignKey('service.id'))
-    service = relationship('Service', back_populates='payment')
+    service = relationship('Service', back_populates='payments')
 
     # Many-to-One with Flat
     flat_id = Column(Integer, ForeignKey('flat.id'))
-    flat = relationship('Flat', back_populates='payment')
+    flat = relationship('Flat', back_populates='payments')
 
 
 class Flat(Base):
@@ -34,8 +32,7 @@ class Flat(Base):
     building_num = Column(Integer)
 
     # One-to-Many relation with Payment
-    payment = relationship('Payment', back_populates='flat')
-    
+    payments = relationship('Payment', back_populates='flat')
 
 
 class Service(Base):
@@ -48,7 +45,7 @@ class Service(Base):
     counter = Column(Boolean)
 
     # One-to-Many with Payment
-    service = relationship('Payment', back_populates='service')
+    payments = relationship('Payment', back_populates='service')
 
 
 Base.metadata.create_all(engine)
