@@ -43,6 +43,7 @@ class Service(Base):
     __tablename__ = 'service'
 
     id = Column(Integer, primary_key=True)
+    price_per_month = Column(Numeric(precision=10, scale=2))
     name = Column(String(50))
     counter = Column(Boolean)
 
