@@ -1,0 +1,10 @@
+version: '3'
+services:
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: finance
+      POSTGRES_USER: arsen
+      POSTGRES_PASSWORD: 2431
+    ports:
+      - "5432:5432"
