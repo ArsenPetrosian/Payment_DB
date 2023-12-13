@@ -1,6 +1,8 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Date, Numeric, Boolean
 from sqlalchemy.orm import relationship
 from init_db import Base, engine
+from sqlalchemy.dialects.postgresql import JSONB
+
 
 
 class Payment(Base):
@@ -46,6 +48,16 @@ class Service(Base):
 
     # One-to-Many with Payment
     payments = relationship('Payment', back_populates='service')
+
+
+class JsonField(Base):
+
+    __tablename__ = 'json_data'
+
+    id = Column(Integer, primary_key=True)
+    json_field = Column(JSONB)
+
+
 
 
 Base.metadata.create_all(engine)
