@@ -160,7 +160,7 @@ def update_payment(payment_id: int, updated: PaymentCreate, db: Session = Depend
 def update_service(service_id: int, updated: ServiceCreate, db: Session = Depends(get_db)):
     service = db.query(Service).filter(Service.id == service_id).first()
     if service is None:
-        raise HTTPException(status_code=404, detail='Payment not found')
+        raise HTTPException(status_code=404, detail='Service not found')
 
     for key, value in updated.dict().items():
         setattr(service, key, value)
@@ -168,3 +168,35 @@ def update_service(service_id: int, updated: ServiceCreate, db: Session = Depend
     db.commit()
     db.refresh(service)
     return service
+
+
+# Delete
+@app.delete("/flat/{flat_id}", response_model=FlatDelete)
+def delete_flat(flat_id: int, db: Session = Depends(get_db)):
+    flat = db.query(Flat).filter(Flat.id == flat_id).first()
+    if flat is None:
+        raise HTTPException(status_code=404, detail="Flat not found")
+
+    db.delete(flat)
+    db.commit()
+    return {"message": "Flat deleted"}
+
+@app.delete("/payment/{payment_id}", response_model=PaymentDelete)
+def delete_payment(payment_id: int, db: Session = Depends(get_db)):
+    payment = db.query(Payment).filter(Payment.id == payment_id).first()
+    if payment is None:
+        raise HTTPException(status_code=404, detail="Payment not found")
+
+    db.delete(payment)
+    db.commit()
+    return {"message": "Payment deleted"}
+
+@app.delete("/service/{service_id}", response_model=ServiceDelete)
+def delete_service(service_id: int, db: Session = Depends(get_db)):
+    service = db.query(Service).filter(Service.id == service_id).first()
+    if service is None:
+        raise HTTPException(status_code=404, detail="Service not found")
+
+    db.delete(service)
+    db.commit()
+    return {"message": "Service deleted"}
