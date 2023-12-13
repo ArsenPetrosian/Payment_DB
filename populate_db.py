@@ -49,6 +49,19 @@ def populate_service():
     return response.json()
 
 
+def populate_json_data():
+    url = f"{BASE_URL}/json_field/"
+    data = {
+        "json_field": {
+            "address": fake.address().replace('\n', ', '),
+            "street": fake.street_name(),
+            "city": fake.city(),
+        }
+    }
+    response = requests.post(url, json=data)
+    return response.json()
+
+
 for _ in range(100):
     populate_flat()
 
@@ -58,6 +71,8 @@ for _ in range(100):
 for _ in range(100):
     populate_service()
 
+for _ in range(100):
+    populate_json_data()
 
 session.commit()
 

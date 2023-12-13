@@ -1,60 +1,7 @@
-from app import get_db, app
 from fastapi import HTTPException, Depends
+from app import *
 from sqlalchemy.orm import Session
-from models import Flat, Payment, Service
-from pydantic import BaseModel, condecimal
-from datetime import date
-
-class FlatCreate(BaseModel):
-    owner: str
-    street: str
-    flat_num: int
-    building_num: int
-
-
-class FlatDelete(BaseModel):
-    message: str
-
-
-class FlatResponse(BaseModel):
-    id: int
-    owner: str
-    street: str
-    flat_num: int
-    building_num: int
-
-
-class PaymentCreate(BaseModel):
-    sum: condecimal(max_digits=10, decimal_places=2)
-    date_of_payment: date
-    for_date: str
-
-class PaymentDelete(BaseModel):
-    message: str
-
-
-class PaymentResponse(BaseModel):
-    id: int
-    sum: condecimal(max_digits=10, decimal_places=2)
-    date_of_payment: date
-    for_date: str
-
-class ServiceCreate(BaseModel):
-    price_per_month: condecimal(max_digits=10, decimal_places=2)
-    name: str
-    counter: bool
-
-
-class ServiceDelete(BaseModel):
-    message: str
-
-
-class ServiceResponse(BaseModel):
-    id: int
-    price_per_month: condecimal(max_digits=10, decimal_places=2)
-    name: str
-    counter: bool
-
+from models import Flat, Service, Payment, JsonField
 
 
 # Create
@@ -74,15 +21,6 @@ def create_payment(payment: PaymentCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_payment)
     return db_payment
-
-
-@app.post("/service/", response_model=ServiceResponse)
-def create_service(service: ServiceCreate, db: Session = Depends(get_db)):
-    db_service = Service(**service.dict())
-    db.add(db_service)
-    db.commit()
-    db.refresh(db_service)
-    return db_service
 
 
 
@@ -184,3 +122,12 @@ def delete_service(service_id: int, db: Session = Depends(get_db)):
     db.delete(service)
     db.commit()
     return {"message": "Service deleted"}
+
+
+@app.post("/json_field/", response_model=JsonResponse)
+def create_json_data(json_data: JsonCreate, db: Session = Depends(get_db)):
+    db_json_data = JsonField(**json_data.dict())
+    db.add(db_json_data)
+    db.commit()
+    db.refresh(db_json_data)
+    return db_json_data
