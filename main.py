@@ -4,6 +4,7 @@ from init_db import Base, engine, SessionLocal
 from models import Payment, Service, Flat, JsonField
 from pydantic import BaseModel, condecimal
 from datetime import date
+from typing import List
 
 app = FastAPI()
 
@@ -18,7 +19,9 @@ def get_db():
         db.close()
 
 
-
+@app.get("/")
+def root():
+    return "Welcome"
 
 class JsonCreate(BaseModel):
     json_field: dict
@@ -218,3 +221,29 @@ def create_json_data(json_data: JsonCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_json_data)
     return db_json_data
+
+
+
+# pagination for read
+@app.get("/flats/", response_model=List[FlatResponse])
+def read_flats(page: int = 0, per_page: int = 10, db: Session = Depends(get_db)):
+    flat = db.query(Flat).offset(page).limit(per_page).all()
+    if flat is None:
+        raise HTTPException(status_code=404, detail='Flats not found')
+    return flat
+
+
+@app.get("/payments/", response_model=List[PaymentResponse])
+def read_payments(page: int = 0, per_page: int = 10, db: Session = Depends(get_db)):
+    payment = db.query(Payment).offset(page).limit(per_page).all()
+    if payment is None:
+        raise HTTPException(status_code=404, detail='Payments not found')
+    return payment
+
+
+@app.get("/services/", response_model=List[ServiceResponse])
+def read_services(page: int = 0, per_page: int = 10, db: Session = Depends(get_db)):
+    service = db.query(Service).offset(page).limit(per_page).all()
+    if service is None:
+        raise HTTPException(status_code=404, detail='Services not found')
+    return service
