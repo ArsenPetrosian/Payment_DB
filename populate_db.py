@@ -77,5 +77,3 @@ for _ in range(100):
 session.commit()
 
 print("Data Base population completed")  # Message to know that populating DB completed successfully
-
-

@@ -58,6 +58,4 @@ class JsonField(Base):
     json_field = Column(JSONB)
 
 
-
-
 Base.metadata.create_all(engine)

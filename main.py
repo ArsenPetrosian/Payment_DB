@@ -1,10 +1,12 @@
 from fastapi import FastAPI, HTTPException, Depends
 from sqlalchemy.orm import Session
 from init_db import Base, engine, SessionLocal
-from models import Payment, Service, Flat, JsonField
+from models import Flat, Service, Payment, JsonField
 from pydantic import BaseModel, condecimal
 from datetime import date
 from typing import List
+from sqlalchemy import func
+
 
 app = FastAPI()
 
@@ -83,7 +85,7 @@ class ServiceResponse(BaseModel):
     counter: bool
 
 
-
+# CRUD
 
 # Create
 @app.post("/flat/", response_model=FlatResponse)
@@ -193,6 +195,7 @@ def delete_flat(flat_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Flat deleted"}
 
+
 @app.delete("/payment/{payment_id}", response_model=PaymentDelete)
 def delete_payment(payment_id: int, db: Session = Depends(get_db)):
     payment = db.query(Payment).filter(Payment.id == payment_id).first()
@@ -203,6 +206,7 @@ def delete_payment(payment_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Payment deleted"}
 
+
 @app.delete("/service/{service_id}", response_model=ServiceDelete)
 def delete_service(service_id: int, db: Session = Depends(get_db)):
     service = db.query(Service).filter(Service.id == service_id).first()
@@ -212,15 +216,6 @@ def delete_service(service_id: int, db: Session = Depends(get_db)):
     db.delete(service)
     db.commit()
     return {"message": "Service deleted"}
-
-
-@app.post("/json_field/", response_model=JsonResponse)
-def create_json_data(json_data: JsonCreate, db: Session = Depends(get_db)):
-    db_json_data = JsonField(**json_data.dict())
-    db.add(db_json_data)
-    db.commit()
-    db.refresh(db_json_data)
-    return db_json_data
 
 
 
@@ -247,3 +242,97 @@ def read_services(page: int = 0, per_page: int = 10, db: Session = Depends(get_d
     if service is None:
         raise HTTPException(status_code=404, detail='Services not found')
     return service
+
+
+# REST API for JsonField model
+# For adding new data in JsonData model
+@app.post("/json_data/", response_model=JsonResponse)
+def create_json_data(json_data: JsonCreate, db: Session = Depends(get_db)):
+    db_json_data = JsonField(**json_data.dict())
+    db.add(db_json_data)
+    db.commit()
+    db.refresh(db_json_data)
+    return db_json_data
+
+
+# Full-text search by regular expression
+@app.get("/json_data/regular_expression_search/{expression}")
+def search(expression: str, db: Session = Depends(get_db)):
+    # Using to_tsvector function to cast json_field into text format
+    query = f"SELECT * FROM json_data WHERE to_tsvector('simple', json_field::text) @@ to_tsquery('simple', :expression)"
+    result = db.execute(query, {"expression": expression})
+    data = result.fetchall()
+    if not data:
+        raise HTTPException(status_code=404, detail="No matches found")
+    return data
+
+
+# SELECT ... WHERE
+@app.get("/payment/search/", response_model=List[PaymentResponse])
+def search_payments(sum: float, date_of_payment: date, db: Session = Depends(get_db)):
+    payments = db.query(Payment).filter(Payment.sum == sum, Payment.date_of_payment == date_of_payment).all()
+    if not payments:
+        raise HTTPException(status_code=404, detail="No matches found")
+    return payments
+
+
+# JOIN
+@app.get("/flat_payments/{flat_id}")
+def get_flat_payments(flat_id: int, db: Session = Depends(get_db)):
+    flat_with_payments = db.query(Flat).filter(Flat.id == flat_id).join(Payment).all()
+    if not flat_with_payments:
+        raise HTTPException(status_code=404, detail='Flat or Payments not found')
+    return flat_with_payments
+
+
+# UPDATE
+@app.put("/update_payment_sum/{flat_id}", response_model=PaymentResponse)
+def update_payment_sum(
+    flat_id: int,
+    service_name: str,
+    start_date: date,
+    end_date: date,
+    updated_sum: condecimal(max_digits=10, decimal_places=2),
+    db: Session = Depends(get_db)
+):
+    payment = (
+        db.query(Payment)
+        .join(Service)
+        .filter(
+            Payment.flat_id == flat_id,
+            Service.name == service_name,
+            Payment.date_of_payment >= start_date,
+            Payment.date_of_payment <= end_date,
+        )
+        .first()
+    )
+
+    if payment is None:
+        raise HTTPException(status_code=404, detail='Payment not found or does not meet conditions')
+
+    payment.sum = updated_sum
+    db.commit()
+    db.refresh(payment)
+    return payment
+
+
+# GROUP BY
+@app.get("/total_payments_by_flat/")
+def get_total_payments_by_flat(db: Session = Depends(get_db)):
+    total_payments = db.query(Flat, func.sum(Payment.sum).label("total_sum")).join(Payment).group_by(Flat.id).all()
+    if not total_payments:
+        raise HTTPException(status_code=404, detail='No payments found')
+    return total_payments
+
+
+# SORTING
+@app.get("/flats_sorted/")
+def get_sorted_flats(page: int = 0, per_page: int = 10, sort_by: str = "owner", db: Session = Depends(get_db)):
+    sort_column = getattr(Flat, sort_by, None)
+    if sort_column is None:
+        raise HTTPException(status_code=400, detail='Invalid sort column')
+
+    flats = db.query(Flat).order_by(sort_column).offset(page).limit(per_page).all()
+    if not flats:
+        raise HTTPException(status_code=404, detail='Flats not found')
+    return flats
